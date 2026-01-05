@@ -7,6 +7,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 
 @Entity(name = "furniture_body")
@@ -27,6 +29,10 @@ public class FurnitureBody implements Serializable {
 
 	@Column(name = "depth")
 	private int depth;
+
+	@ManyToOne
+	@JoinColumn(name = "version_id")
+	private ProjectVersion version; 
 
 	public Long getId() {
 		return id;
@@ -64,9 +70,17 @@ public class FurnitureBody implements Serializable {
 		return serialVersionUID;
 	}
 
+	public ProjectVersion getVersion() {
+		return version;
+	}
+
+	public void setVersion(ProjectVersion version) {
+		this.version = version;
+	}
+
 	@Override
 	public String toString() {
-		return "FurnitureBody [id=" + id + ", width=" + width + ", heigth=" + heigth + ", depth=" + depth + "]";
+		return "FurnitureBody [id=" + id + ", width=" + width + ", heigth=" + heigth + ", depth=" + depth + ", version=" + version + "]";
 	}
 
 }
