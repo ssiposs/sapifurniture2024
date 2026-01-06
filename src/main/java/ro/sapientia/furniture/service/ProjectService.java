@@ -13,6 +13,8 @@ import ro.sapientia.furniture.dto.response.FurnitureBodyResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
 import ro.sapientia.furniture.exception.ServiceUnavailableException;
+import ro.sapientia.furniture.exception.ResourceNotFoundException;
+
 import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.model.ProjectVersion;
 import ro.sapientia.furniture.repository.ProjectRepository;
@@ -100,6 +102,22 @@ public class ProjectService {
                     p.getCreatedAt()
             ));
 
+        } catch (DataAccessException ex) {
+            throw new ServiceUnavailableException("Database error");
+        }
+    }
+
+    // --------------------
+    // DELETE PROJECT
+    @Transactional
+    public Boolean deleteProject(Long projectId) {
+        try {
+            Project project = projectRepository.findById(projectId).orElseThrow(() -> { return new ResourceNotFoundException("Project not found"); });
+
+            project.setDeletedAt(LocalDateTime.now());
+            projectRepository.save(project);
+
+            return true;
         } catch (DataAccessException ex) {
             throw new ServiceUnavailableException("Database error");
         }

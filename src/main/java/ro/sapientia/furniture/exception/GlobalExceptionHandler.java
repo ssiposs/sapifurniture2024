@@ -21,7 +21,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
-@ExceptionHandler(ServiceUnavailableException.class)
+    @ExceptionHandler(ServiceUnavailableException.class)
     public ResponseEntity<Map<String, String>> handleServiceUnavailable(
             ServiceUnavailableException ex) {
 
@@ -31,6 +31,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(error);
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleResourceNotFound(
+        ResourceNotFoundException ex) {
+
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "Resource not found.");
+
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(error);
     }
 
 }
