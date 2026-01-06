@@ -1,5 +1,7 @@
 package ro.sapientia.furniture.controller;
 
+import java.util.List;
+
 import javax.validation.Valid;
 
 import org.springframework.data.domain.Page;
@@ -11,6 +13,7 @@ import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
+import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.service.ProjectService;
 
@@ -55,6 +58,11 @@ public class ProjectController {
 
         UpdateProjectResponse response = projectService.updateProject(id, request);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/versions")
+    public ResponseEntity<List<ProjectVersionResponse>> getProjectVersions(@PathVariable Long id) {
+        return ResponseEntity.ok(projectService.getProjectVersions(id));
     }
 
     @DeleteMapping("/{projectId}")

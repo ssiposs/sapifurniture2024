@@ -35,6 +35,12 @@ public class ProjectVersion implements Serializable {
     @Column(name = "version_note")
     private String versionNote;
 
+    @Column(name = "name", nullable = false)
+    private String name;
+
+    @Column(name = "description")
+    private String description;
+
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
@@ -74,6 +80,22 @@ public class ProjectVersion implements Serializable {
 
     public void setVersionNote(String versionNote) {
         this.versionNote = versionNote;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public Project getProject() {

@@ -2,6 +2,7 @@ package ro.sapientia.furniture.service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.*;
@@ -20,6 +21,7 @@ import ro.sapientia.furniture.exception.ResourceNotFoundException;
 import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.model.ProjectVersion;
 import ro.sapientia.furniture.repository.ProjectRepository;
+import ro.sapientia.furniture.repository.ProjectVersionRepository;
 
 @Service
 public class ProjectService {
@@ -27,9 +29,11 @@ public class ProjectService {
     private static final int PAGE_SIZE = 10;
 
     private final ProjectRepository projectRepository;
+    private final ProjectVersionRepository projectVersionRepository;
 
-    public ProjectService(ProjectRepository projectRepository) {
+    public ProjectService(ProjectRepository projectRepository, ProjectVersionRepository projectVersionRepository) {
         this.projectRepository = projectRepository;
+        this.projectVersionRepository = projectVersionRepository;
     }
 
     // --------------------
@@ -69,7 +73,9 @@ public class ProjectService {
                                         b.getHeigth(),
                                         b.getDepth()
                                 ))
-                                .toList()
+                                .toList(),
+                        v.getName(),
+                        v.getDescription()
                 ))
                 .toList();
 
@@ -115,15 +121,15 @@ public class ProjectService {
     @Transactional
     public UpdateProjectResponse updateProject(Long id, UpdateProjectRequest request) {
         Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found with id: " + id));
+                .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        // 1. Create a version record of the PREVIOUS state before updating
-        // saveProjectVersion(project);
+        // 1. Handle Versioning before updating the main project
+        createSnapshot(project);
 
-        // 2. Update fields
+        // 2. Update the actual project
         project.setName(request.getName());
         project.setDescription(request.getDescription());
-        project.setUpdatedAt(LocalDateTime.now()); // Automatic update
+        project.setUpdatedAt(LocalDateTime.now());
 
         Project updatedProject = projectRepository.save(project);
 
@@ -133,6 +139,67 @@ public class ProjectService {
                 updatedProject.getDescription(),
                 updatedProject.getUpdatedAt()
         );
+    }
+
+    private void createSnapshot(Project project) {
+        List<ProjectVersion> versions = projectVersionRepository
+                .findByProjectIdOrderByVersionNumberAsc(project.getId());
+
+        // 3. Keep only the last 10: Delete the oldest if we're at the limit
+        if (versions.size() >= 10) {
+            projectVersionRepository.delete(versions.get(0));
+        }
+
+        // 4. Determine next version number
+        int nextVersionNumber = versions.isEmpty() ? 1 : 
+                versions.get(versions.size() - 1).getVersionNumber() + 1;
+
+        // 5. Create new version entry
+        ProjectVersion newVersion = new ProjectVersion();
+        newVersion.setProject(project);
+        newVersion.setVersionNumber(nextVersionNumber);
+        newVersion.setSavedAt(LocalDateTime.now());
+        newVersion.setVersionNote("Manual update to: " + project.getName());
+        
+        /* CRITICAL NOTE: 
+           If you want to RESTORE the name and description later, 
+           your ProjectVersion entity needs fields to store them! 
+           Currently, your ProjectVersion only has 'versionNote'. 
+           I recommend adding 'name' and 'description' columns to ProjectVersion.
+        */
+
+        newVersion.setName(project.getName());
+        newVersion.setDescription(project.getDescription());
+
+        projectVersionRepository.save(newVersion);
+    }
+
+    public List<ProjectVersionResponse> getProjectVersions(Long projectId) {
+        // Verify project exists first
+        if (!projectRepository.existsById(projectId)) {
+            throw new RuntimeException("Project not found");
+        }
+
+        // Fetch versions using the repository method we'll define below
+        return projectVersionRepository.findByProjectIdOrderByVersionNumberDesc(projectId)
+                .stream()
+                .map(v -> new ProjectVersionResponse(
+                        v.getId(),
+                        v.getVersionNumber(),
+                        v.getSavedAt(),
+                        v.getVersionNote(),
+                        v.getBodies().stream()
+                                .map(b -> new FurnitureBodyResponse(
+                                        b.getId(),
+                                        b.getWidth(),
+                                        b.getHeigth(),
+                                        b.getDepth()
+                                ))
+                                .collect(Collectors.toList()),
+                        v.getName(),
+                        v.getDescription()
+                ))
+                .collect(Collectors.toList());
     }
 
     // --------------------
