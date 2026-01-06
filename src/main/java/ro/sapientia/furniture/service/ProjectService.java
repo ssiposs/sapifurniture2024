@@ -8,10 +8,12 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.FurnitureBodyResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
+import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.exception.ServiceUnavailableException;
 import ro.sapientia.furniture.exception.ResourceNotFoundException;
 
@@ -108,7 +110,34 @@ public class ProjectService {
     }
 
     // --------------------
+    // UPDATE PROJECT
+    // --------------------
+    @Transactional
+    public UpdateProjectResponse updateProject(Long id, UpdateProjectRequest request) {
+        Project project = projectRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Project not found with id: " + id));
+
+        // 1. Create a version record of the PREVIOUS state before updating
+        // saveProjectVersion(project);
+
+        // 2. Update fields
+        project.setName(request.getName());
+        project.setDescription(request.getDescription());
+        project.setUpdatedAt(LocalDateTime.now()); // Automatic update
+
+        Project updatedProject = projectRepository.save(project);
+
+        return new UpdateProjectResponse(
+                updatedProject.getId(),
+                updatedProject.getName(),
+                updatedProject.getDescription(),
+                updatedProject.getUpdatedAt()
+        );
+    }
+
+    // --------------------
     // DELETE PROJECT
+    // --------------------
     @Transactional
     public Boolean deleteProject(Long projectId) {
         try {

@@ -8,8 +8,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
+import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
+import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.service.ProjectService;
 
 @RestController
@@ -44,6 +46,15 @@ public class ProjectController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<UpdateProjectResponse> updateProject(
+            @PathVariable Long id,
+            @Valid @RequestBody UpdateProjectRequest request) {
+
+        UpdateProjectResponse response = projectService.updateProject(id, request);
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{projectId}")
