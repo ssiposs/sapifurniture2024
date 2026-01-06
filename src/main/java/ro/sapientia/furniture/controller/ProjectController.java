@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
+import ro.sapientia.furniture.dto.response.ProjectDetailsResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
@@ -37,6 +38,16 @@ public class ProjectController {
                 projectService.getProjects(page)
         );
     }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ProjectDetailsResponse> getProjectById(
+            @PathVariable Long id) {
+
+        return ResponseEntity.ok(
+                projectService.getProjectById(id)
+        );
+    }
+
 
     @PostMapping
     public ResponseEntity<CreateProjectResponse> createProject(
