@@ -21,13 +21,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, String>> handleGenericError(Exception ex) {
+@ExceptionHandler(ServiceUnavailableException.class)
+    public ResponseEntity<Map<String, String>> handleServiceUnavailable(
+            ServiceUnavailableException ex) {
+
         Map<String, String> error = new HashMap<>();
-        error.put("error", "Internal server error.");
+        error.put("error", "Service temporarily unavailable.");
 
         return ResponseEntity
-                .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(error);
     }
+
 }
