@@ -2,12 +2,14 @@ package ro.sapientia.furniture.controller;
 
 import javax.validation.Valid;
 
+import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
+import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.service.ProjectService;
 
@@ -19,6 +21,15 @@ public class ProjectController {
 
     public ProjectController(ProjectService projectService) {
         this.projectService = projectService;
+    }
+
+    @GetMapping
+    public ResponseEntity<Page<ProjectListItemResponse>> getProjects(
+            @RequestParam(defaultValue = "0") int page) {
+
+        return ResponseEntity.ok(
+                projectService.getProjects(page)
+        );
     }
 
     @PostMapping
