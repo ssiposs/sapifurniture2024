@@ -8,7 +8,5 @@ import ro.sapientia.furniture.model.Project;
 
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
-    Project findProjectById(Long id);
-
     Page<Project> findByDeletedAtIsNull(Pageable pageable);
 }

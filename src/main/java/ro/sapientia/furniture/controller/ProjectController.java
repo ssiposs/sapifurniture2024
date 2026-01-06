@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.*;
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
-import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.service.ProjectService;
 
 @RestController
@@ -36,10 +35,14 @@ public class ProjectController {
     public ResponseEntity<CreateProjectResponse> createProject(
             @Valid @RequestBody CreateProjectRequest request) {
 
-        Project project = projectService.createProject(request.getName());
+        
+        CreateProjectResponse response = projectService.createProject(
+                request.getName(),
+                request.getDescription()  
+        );
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(new CreateProjectResponse(project.getId()));
+                .body(response);
     }
 }
