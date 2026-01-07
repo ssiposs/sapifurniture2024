@@ -9,6 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import ro.sapientia.furniture.exception.ResourceNotFoundException;
@@ -23,7 +26,11 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.RequestBuilder;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
@@ -80,6 +87,13 @@ class ProjectControllerTest {
 
     //     verify(projectService, times(1)).createProject(projectName, projectDescription);
     // }
+
+    @Test
+    void getVersions_ShouldReturnEmptyList_WhenNoVersionsExist() throws Exception {
+        mockMvc.perform(get("/projects/1/versions"))
+               .andExpect(status().isOk())
+               .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
 
     @Test
     void deleteProject_ShouldReturnOk() throws Exception {
