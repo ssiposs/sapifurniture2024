@@ -15,8 +15,10 @@ import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
+import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.service.ProjectService;
 
+@CrossOrigin(origins = "http://localhost")
 @RestController
 @RequestMapping("/projects")
 public class ProjectController {
@@ -63,6 +65,21 @@ public class ProjectController {
     @GetMapping("/{id}/versions")
     public ResponseEntity<List<ProjectVersionResponse>> getProjectVersions(@PathVariable Long id) {
         return ResponseEntity.ok(projectService.getProjectVersions(id));
+    }
+
+    @PostMapping("/{id}/versions/{versionId}/restore")
+    public ResponseEntity<UpdateProjectResponse> restoreVersion(
+    @PathVariable Long id,
+    @PathVariable Long versionId) {
+    
+        Project restoredProject = projectService.restoreVersion(id, versionId);
+        
+        return ResponseEntity.ok(new UpdateProjectResponse(
+                restoredProject.getId(),
+                restoredProject.getName(),
+                restoredProject.getDescription(),
+                restoredProject.getUpdatedAt()
+        ));
     }
 
     @DeleteMapping("/{projectId}")

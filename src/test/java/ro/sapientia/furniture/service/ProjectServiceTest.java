@@ -161,6 +161,37 @@ public class ProjectServiceTest {
     }
 
     @Test
+    @DisplayName("Restore Version - Should update project fields with version data")
+    void restoreVersion_Success() {
+        // GIVEN
+        Long projectId = 1L;
+        Long versionId = 100L;
+        
+        Project currentProject = new Project();
+        currentProject.setId(projectId);
+        currentProject.setName("Current Name");
+
+        ProjectVersion versionToRestore = new ProjectVersion();
+        versionToRestore.setId(versionId);
+        versionToRestore.setName("Old Historic Name");
+        versionToRestore.setDescription("Old Description");
+        versionToRestore.setProject(currentProject);
+
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(currentProject));
+        when(projectVersionRepository.findById(versionId)).thenReturn(Optional.of(versionToRestore));
+        when(projectRepository.save(any(Project.class))).thenAnswer(i -> i.getArguments()[0]);
+
+        // WHEN
+        Project result = projectService.restoreVersion(projectId, versionId);
+
+        // THEN
+        assertEquals("Old Historic Name", result.getName());
+        assertEquals("Old Description", result.getDescription());
+        // Verify a snapshot was taken BEFORE restoring (optional but good for your logic)
+        verify(projectVersionRepository, atLeastOnce()).save(any(ProjectVersion.class));
+    }
+
+    @Test
     void deleteProject_Success_ShouldSoftDelete() {
         // Arrange
         Long projectId = 1L;

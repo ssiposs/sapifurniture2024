@@ -202,6 +202,25 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional
+    public Project restoreVersion(Long projectId, Long versionId) {
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+                
+        ProjectVersion version = projectVersionRepository.findById(versionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Version not found"));
+
+        // 1. Snapshot the CURRENT state as a new version before restoring
+        createSnapshot(project); 
+
+        // 2. Overwrite project fields with version data
+        project.setName(version.getName());
+        project.setDescription(version.getDescription());
+        project.setUpdatedAt(LocalDateTime.now());
+
+        return projectRepository.save(project);
+    }
+
     // --------------------
     // DELETE PROJECT
     // --------------------
