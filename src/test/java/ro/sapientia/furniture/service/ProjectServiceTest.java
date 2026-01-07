@@ -1,33 +1,41 @@
 package ro.sapientia.furniture.service;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.dao.DataIntegrityViolationException;
-
-import ro.sapientia.furniture.exception.ResourceNotFoundException;
-import ro.sapientia.furniture.exception.ServiceUnavailableException;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.dao.DataIntegrityViolationException;
 
+import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
+import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
+import ro.sapientia.furniture.exception.ResourceNotFoundException;
+import ro.sapientia.furniture.exception.ServiceUnavailableException;
 import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.model.ProjectVersion;
 import ro.sapientia.furniture.repository.ProjectRepository;
+import ro.sapientia.furniture.repository.ProjectVersionRepository;
 
 public class ProjectServiceTest {
 
     @Mock
     private ProjectRepository projectRepository;
+
+    @Mock
+    private ProjectVersionRepository projectVersionRepository;
 
     @InjectMocks
     private ProjectService projectService;
@@ -37,41 +45,120 @@ public class ProjectServiceTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    // @Test
-    // void testCreateProject() {
-    //     String projectName = "Test Project";
-    //     String projectDescription = "This is a test project.";
-    //     LocalDateTime now = LocalDateTime.now();
+    @Test
+    void testCreateProject() {
+        String projectName = "Test Project";
+        String projectDescription = "This is a test project.";
+        LocalDateTime now = LocalDateTime.now();
 
-    //     Project project = new Project();
-    //     project.setId(1L);
-    //     project.setName(projectName);
-    //     project.setDescription(projectDescription);
-    //     project.setCreatedAt(now);
-    //     project.setUpdatedAt(now);
+        Project project = new Project();
+        project.setId(1L);
+        project.setName(projectName);
+        project.setDescription(projectDescription);
+        project.setCreatedAt(now);
+        project.setUpdatedAt(now);
 
-    //     ProjectVersion version = new ProjectVersion();
-    //     version.setId(1L);
-    //     version.setVersionNumber(1);
-    //     version.setSavedAt(now);
-    //     version.setVersionNote("Initial version");
-    //     version.setProject(project);
-    //     project.getVersions().add(version);
+        ProjectVersion version = new ProjectVersion();
+        version.setId(1L);
+        version.setVersionNumber(1);
+        version.setSavedAt(now);
+        version.setVersionNote("Initial version");
+        version.setProject(project);
+        project.getVersions().add(version);
 
-    //     when(projectRepository.save(any(Project.class))).thenReturn(project);
+        when(projectRepository.save(any(Project.class))).thenReturn(project);
 
-    //     CreateProjectResponse result = projectService.createProject(projectName, projectDescription);
+        CreateProjectResponse result = projectService.createProject(projectName, projectDescription);
 
-    //     assertNotNull(result);
-    //     assertEquals(1L, result.getId());
-    //     assertEquals(projectName, result.getName());
-    //     assertEquals(projectDescription, result.getDescription());
-    //     assertNotNull(result.getCreatedAt());
-    //     assertEquals(1, result.getVersions().size());
-    //     assertEquals(1, result.getVersions().get(0).getVersionNumber());
+        assertNotNull(result);
+        assertEquals(1L, result.getId());
+        assertEquals(projectName, result.getName());
+        assertEquals(projectDescription, result.getDescription());
+        assertNotNull(result.getCreatedAt());
+        assertEquals(1, result.getVersions().size());
+        assertEquals(1, result.getVersions().get(0).getVersionNumber());
 
-    //     verify(projectRepository, times(1)).save(any(Project.class));
-    // }
+        verify(projectRepository, times(1)).save(any(Project.class));
+    }
+
+    @Test
+    @DisplayName("Update Project - Success and Version Snapshot Created")
+    void updateProject_Success() {
+        // Arrange
+        Long projectId = 1L;
+        Project existingProject = new Project();
+        existingProject.setId(projectId);
+        existingProject.setName("Old Name");
+        existingProject.setDescription("Old Description");
+
+        UpdateProjectRequest request = new UpdateProjectRequest();
+        request.setName("New Name");
+        request.setDescription("New Description");
+
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(existingProject));
+        when(projectVersionRepository.findByProjectIdOrderByVersionNumberAsc(projectId)).thenReturn(new ArrayList<>());
+        when(projectRepository.save(any(Project.class))).thenReturn(existingProject);
+
+        // Act
+        UpdateProjectResponse result = projectService.updateProject(projectId, request);
+
+        // Assert
+        assertEquals("New Name", result.getName());
+        assertNotNull(result.getUpdatedAt());
+        verify(projectVersionRepository, times(1)).save(any(ProjectVersion.class));
+        verify(projectRepository, times(1)).save(existingProject);
+    }
+
+    @Test
+    @DisplayName("Update Project - Delete oldest version when limit of 10 is reached")
+    void updateProject_MaintainMax10Versions() {
+        // Arrange
+        Long projectId = 1L;
+        Project project = new Project();
+        project.setId(projectId);
+
+        List<ProjectVersion> tenVersions = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            ProjectVersion v = new ProjectVersion();
+            v.setVersionNumber(i);
+            tenVersions.add(v);
+        }
+
+        UpdateProjectRequest request = new UpdateProjectRequest();
+        request.setName("New Name");
+
+        when(projectRepository.findById(projectId)).thenReturn(Optional.of(project));
+        when(projectVersionRepository.findByProjectIdOrderByVersionNumberAsc(projectId)).thenReturn(tenVersions);
+        when(projectRepository.save(any(Project.class))).thenReturn(project);
+
+        // Act
+        projectService.updateProject(projectId, request);
+
+        // Assert: Verify the first (oldest) version was deleted
+        verify(projectVersionRepository, times(1)).delete(tenVersions.get(0));
+        // Verify the 11th version was saved
+        verify(projectVersionRepository, times(1)).save(argThat(v -> v.getVersionNumber() == 11));
+    }
+
+    @Test
+    @DisplayName("Get Project Versions - Return mapped DTOs")
+    void getProjectVersions_Success() {
+        // Arrange
+        Long projectId = 1L;
+        ProjectVersion v1 = new ProjectVersion();
+        v1.setVersionNumber(1);
+        
+        when(projectRepository.existsById(projectId)).thenReturn(true);
+        when(projectVersionRepository.findByProjectIdOrderByVersionNumberDesc(projectId))
+            .thenReturn(List.of(v1));
+
+        // Act
+        List<ProjectVersionResponse> result = projectService.getProjectVersions(projectId);
+
+        // Assert
+        assertFalse(result.isEmpty());
+        assertEquals(1, result.get(0).getVersionNumber());
+    }
 
     @Test
     void deleteProject_Success_ShouldSoftDelete() {
@@ -119,3 +206,5 @@ public class ProjectServiceTest {
         });
     }
 }
+
+// Run the tests with: ./mvnw test -Dtest=ProjectServiceTest

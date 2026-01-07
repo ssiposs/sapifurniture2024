@@ -9,18 +9,22 @@ public class ProjectVersionResponse {
     private int versionNumber;
     private LocalDateTime savedAt;
     private String versionNote;
+    private String name;
+    private String description;
     private List<FurnitureBodyResponse> bodies;
 
     // Constructors
     public ProjectVersionResponse() {
     }
 
-    public ProjectVersionResponse(Long id, int versionNumber, LocalDateTime savedAt, String versionNote, List<FurnitureBodyResponse> bodies) {
+    public ProjectVersionResponse(Long id, int versionNumber, LocalDateTime savedAt, String versionNote, List<FurnitureBodyResponse> bodies, String name, String description) {
         this.id = id;
         this.versionNumber = versionNumber;
         this.savedAt = savedAt;
         this.versionNote = versionNote;
         this.bodies = bodies;
+        this.name = name;
+        this.description = description;
     }
 
     // Getters and Setters
@@ -54,6 +58,21 @@ public class ProjectVersionResponse {
 
     public void setVersionNote(String versionNote) {
         this.versionNote = versionNote;
+    }
+
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
     }
 
     public List<FurnitureBodyResponse> getBodies() {
