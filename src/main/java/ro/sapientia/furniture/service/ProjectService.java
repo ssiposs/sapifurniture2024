@@ -215,7 +215,11 @@ private void createSnapshotWithBodies(Project project, String name, String descr
 
     // Keep only the last 10: Delete the oldest if we're at the limit
     if (versions.size() >= 10) {
-        projectVersionRepository.delete(versions.get(0));
+        ProjectVersion oldestVersion = versions.get(0);
+        // FONTOS: Távolítsd el a project versions kollekcióból is!
+        project.getVersions().remove(oldestVersion);
+        projectVersionRepository.delete(oldestVersion);
+        projectVersionRepository.flush();  // Biztosítja, hogy a törlés megtörténjen
     }
 
     // Determine next version number
@@ -233,7 +237,6 @@ private void createSnapshotWithBodies(Project project, String name, String descr
 
     // Bodies logic: use provided bodies OR copy from latest version
     if (bodies != null && !bodies.isEmpty()) {
-        // Use the new bodies from request
         bodies.forEach(bodyReq -> {
             FurnitureBody body = new FurnitureBody();
             body.setWidth(bodyReq.getWidth());
@@ -243,7 +246,7 @@ private void createSnapshotWithBodies(Project project, String name, String descr
             newVersion.getBodies().add(body);
         });
     } else if (!versions.isEmpty()) {
-        // Copy bodies from the latest version
+        // Copy bodies from the latest version (but skip if it was the deleted one)
         ProjectVersion latestVersion = versions.get(versions.size() - 1);
         latestVersion.getBodies().forEach(existingBody -> {
             FurnitureBody bodyCopy = new FurnitureBody();
@@ -255,6 +258,9 @@ private void createSnapshotWithBodies(Project project, String name, String descr
         });
     }
 
+    // FONTOS: Add hozzá a project versions kollekcióhoz!
+    project.getVersions().add(newVersion);
+    
     projectVersionRepository.save(newVersion);
 }
     public List<ProjectVersionResponse> getProjectVersions(Long projectId) {
@@ -285,24 +291,39 @@ private void createSnapshotWithBodies(Project project, String name, String descr
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public Project restoreVersion(Long projectId, Long versionId) {
+
+        @Transactional
+        public Project restoreVersion(Long projectId, Long versionId) {
         Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
-                
+        .orElseThrow(() -> new ResourceNotFoundException("Project not found"));
+
         ProjectVersion version = projectVersionRepository.findById(versionId)
-                .orElseThrow(() -> new ResourceNotFoundException("Version not found"));
+        .orElseThrow(() -> new ResourceNotFoundException("Version not found"));
 
-        // 1. Snapshot the CURRENT state as a new version before restoring
-        createSnapshotWithBodies(project, project.getName(), project.getDescription(), null);
+        // Force initialize the bodies collection (Lazy loading fix)
+        version.getBodies().size();
 
-        // 2. Overwrite project fields with version data
+        // 1. Convert the restored version's bodies to request format
+        List<CreateFurnitureBodyRequest> restoredBodies = version.getBodies().stream()
+        .map(body -> {
+        CreateFurnitureBodyRequest req = new CreateFurnitureBodyRequest();
+        req.setWidth(body.getWidth());
+        req.setHeigth(body.getHeigth());
+        req.setDepth(body.getDepth());
+        return req;
+        })
+        .collect(Collectors.toList());
+
+        // 2. Create snapshot WITH the restored version's bodies
+        createSnapshotWithBodies(project, version.getName(), version.getDescription(), restoredBodies);
+
+        // 3. Overwrite project fields with version data
         project.setName(version.getName());
         project.setDescription(version.getDescription());
         project.setUpdatedAt(LocalDateTime.now());
 
         return projectRepository.save(project);
-    }
+        }
 
     // --------------------
     // DELETE PROJECT
