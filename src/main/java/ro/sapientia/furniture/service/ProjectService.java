@@ -12,8 +12,10 @@ import org.springframework.transaction.annotation.Transactional;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.FurnitureBodyResponse;
+import ro.sapientia.furniture.dto.response.ProjectDetailsResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
+import ro.sapientia.furniture.exception.EntityNotFoundException;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.exception.ServiceUnavailableException;
 import ro.sapientia.furniture.exception.ResourceNotFoundException;
@@ -113,6 +115,48 @@ public class ProjectService {
         } catch (DataAccessException ex) {
             throw new ServiceUnavailableException("Database error");
         }
+    }
+
+    // --------------------
+    // GET PROJECT BY ID
+    // --------------------
+
+   @Transactional(readOnly = true)
+    public ProjectDetailsResponse getProjectById(Long id) {
+
+        Project project = projectRepository
+                .findByIdAndDeletedAtIsNull(id)
+                .orElseThrow(() ->
+                        new EntityNotFoundException("Project not found with id: " + id)
+                );
+
+        List<ProjectVersionResponse> versionResponses =
+                project.getVersions().stream()
+                        .map(v -> new ProjectVersionResponse(
+                                v.getId(),
+                                v.getVersionNumber(),
+                                v.getSavedAt(),
+                                v.getVersionNote(),
+                                v.getBodies().stream()
+                                        .map(b -> new FurnitureBodyResponse(
+                                                b.getId(),
+                                                b.getWidth(),
+                                                b.getHeigth(),
+                                                b.getDepth()
+                                        ))
+                                        .toList()
+                        ))
+                        .toList();
+
+        return new ProjectDetailsResponse(
+                project.getId(),
+                project.getName(),
+                project.getDescription(),
+                project.getCreatedAt(),
+                project.getUpdatedAt(),
+                project.getDeletedAt(),
+                versionResponses
+        );
     }
 
     // --------------------
