@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
+import ro.sapientia.furniture.dto.request.CreateFurnitureBodyRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.FurnitureBodyResponse;
 import ro.sapientia.furniture.dto.response.ProjectDetailsResponse;
@@ -186,61 +187,76 @@ public class ProjectService {
     // UPDATE PROJECT
     // --------------------
     @Transactional
-    public UpdateProjectResponse updateProject(Long id, UpdateProjectRequest request) {
-        Project project = projectRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Project not found"));
+public UpdateProjectResponse updateProject(Long id, UpdateProjectRequest request) {
+    Project project = projectRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Project not found"));
 
-        // 1. Handle Versioning before updating the main project
-        createSnapshot(project);
+    // 1. Create new version WITH bodies
+    createSnapshotWithBodies(project, request.getName(), request.getDescription(), request.getBodies());
 
-        // 2. Update the actual project
-        project.setName(request.getName());
-        project.setDescription(request.getDescription());
-        project.setUpdatedAt(LocalDateTime.now());
+    // 2. Update the actual project
+    project.setName(request.getName());
+    project.setDescription(request.getDescription());
+    project.setUpdatedAt(LocalDateTime.now());
 
-        Project updatedProject = projectRepository.save(project);
+    Project updatedProject = projectRepository.save(project);
 
-        return new UpdateProjectResponse(
-                updatedProject.getId(),
-                updatedProject.getName(),
-                updatedProject.getDescription(),
-                updatedProject.getUpdatedAt()
-        );
+    return new UpdateProjectResponse(
+            updatedProject.getId(),
+            updatedProject.getName(),
+            updatedProject.getDescription(),
+            updatedProject.getUpdatedAt()
+    );
+}
+
+private void createSnapshotWithBodies(Project project, String name, String description, List<CreateFurnitureBodyRequest> bodies) {
+    List<ProjectVersion> versions = projectVersionRepository
+            .findByProjectIdOrderByVersionNumberAsc(project.getId());
+
+    // Keep only the last 10: Delete the oldest if we're at the limit
+    if (versions.size() >= 10) {
+        projectVersionRepository.delete(versions.get(0));
     }
 
-    private void createSnapshot(Project project) {
-        List<ProjectVersion> versions = projectVersionRepository
-                .findByProjectIdOrderByVersionNumberAsc(project.getId());
+    // Determine next version number
+    int nextVersionNumber = versions.isEmpty() ? 1 : 
+            versions.get(versions.size() - 1).getVersionNumber() + 1;
 
-        // 3. Keep only the last 10: Delete the oldest if we're at the limit
-        if (versions.size() >= 10) {
-            projectVersionRepository.delete(versions.get(0));
-        }
+    // Create new version entry
+    ProjectVersion newVersion = new ProjectVersion();
+    newVersion.setProject(project);
+    newVersion.setVersionNumber(nextVersionNumber);
+    newVersion.setSavedAt(LocalDateTime.now());
+    newVersion.setVersionNote("Manual update to: " + name);
+    newVersion.setName(name);
+    newVersion.setDescription(description);
 
-        // 4. Determine next version number
-        int nextVersionNumber = versions.isEmpty() ? 1 : 
-                versions.get(versions.size() - 1).getVersionNumber() + 1;
-
-        // 5. Create new version entry
-        ProjectVersion newVersion = new ProjectVersion();
-        newVersion.setProject(project);
-        newVersion.setVersionNumber(nextVersionNumber);
-        newVersion.setSavedAt(LocalDateTime.now());
-        newVersion.setVersionNote("Manual update to: " + project.getName());
-        
-        /* CRITICAL NOTE: 
-           If you want to RESTORE the name and description later, 
-           your ProjectVersion entity needs fields to store them! 
-           Currently, your ProjectVersion only has 'versionNote'. 
-           I recommend adding 'name' and 'description' columns to ProjectVersion.
-        */
-
-        newVersion.setName(project.getName());
-        newVersion.setDescription(project.getDescription());
-
-        projectVersionRepository.save(newVersion);
+    // Bodies logic: use provided bodies OR copy from latest version
+    if (bodies != null && !bodies.isEmpty()) {
+        // Use the new bodies from request
+        bodies.forEach(bodyReq -> {
+            FurnitureBody body = new FurnitureBody();
+            body.setWidth(bodyReq.getWidth());
+            body.setHeigth(bodyReq.getHeigth());
+            body.setDepth(bodyReq.getDepth());
+            body.setVersion(newVersion);
+            newVersion.getBodies().add(body);
+        });
+    } else if (!versions.isEmpty()) {
+        // Copy bodies from the latest version
+        ProjectVersion latestVersion = versions.get(versions.size() - 1);
+        latestVersion.getBodies().forEach(existingBody -> {
+            FurnitureBody bodyCopy = new FurnitureBody();
+            bodyCopy.setWidth(existingBody.getWidth());
+            bodyCopy.setHeigth(existingBody.getHeigth());
+            bodyCopy.setDepth(existingBody.getDepth());
+            bodyCopy.setVersion(newVersion);
+            newVersion.getBodies().add(bodyCopy);
+        });
     }
 
+    projectVersionRepository.save(newVersion);
+}
     public List<ProjectVersionResponse> getProjectVersions(Long projectId) {
         // Verify project exists first
         if (!projectRepository.existsById(projectId)) {
@@ -278,7 +294,7 @@ public class ProjectService {
                 .orElseThrow(() -> new ResourceNotFoundException("Version not found"));
 
         // 1. Snapshot the CURRENT state as a new version before restoring
-        createSnapshot(project); 
+        createSnapshotWithBodies(project, project.getName(), project.getDescription(), null);
 
         // 2. Overwrite project fields with version data
         project.setName(version.getName());
