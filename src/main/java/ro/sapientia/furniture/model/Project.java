@@ -15,6 +15,8 @@ import javax.persistence.Id;
 import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 @Entity(name = "project")
 public class Project implements Serializable {
 
@@ -42,6 +44,7 @@ public class Project implements Serializable {
     private LocalDateTime deletedAt;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JsonManagedReference
     private List<ProjectVersion> versions = new ArrayList<>();
 
     // Getters and Setters
