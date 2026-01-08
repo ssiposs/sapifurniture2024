@@ -18,6 +18,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
@@ -68,7 +69,13 @@ public class ProjectServiceTest {
 
         when(projectRepository.save(any(Project.class))).thenReturn(project);
 
-        CreateProjectResponse result = projectService.createProject(projectName, projectDescription);
+        CreateProjectRequest request = new CreateProjectRequest();
+        request.setName(projectName);
+        request.setDescription(projectDescription);
+        // ha van bodies listája, azt is itt lehet beállítani
+        // request.setBodies(...);
+
+        CreateProjectResponse result = projectService.createProject(request);
 
         assertNotNull(result);
         assertEquals(1L, result.getId());

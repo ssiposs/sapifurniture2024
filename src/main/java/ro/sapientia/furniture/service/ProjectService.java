@@ -9,6 +9,7 @@ import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.FurnitureBodyResponse;
@@ -19,6 +20,7 @@ import ro.sapientia.furniture.exception.EntityNotFoundException;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.exception.ServiceUnavailableException;
 import ro.sapientia.furniture.exception.ResourceNotFoundException;
+import ro.sapientia.furniture.model.FurnitureBody;
 
 import ro.sapientia.furniture.model.Project;
 import ro.sapientia.furniture.model.ProjectVersion;
@@ -42,27 +44,46 @@ public class ProjectService {
     // CREATE PROJECT
     // --------------------
     @Transactional
-    public CreateProjectResponse createProject(String name, String description) {
+        public CreateProjectResponse createProject(CreateProjectRequest request) {
         LocalDateTime now = LocalDateTime.now();
 
+        // 1. Project
         Project project = new Project();
-        project.setName(name);
-        project.setDescription(description);
+        project.setName(request.getName());
+        project.setDescription(request.getDescription());
         project.setCreatedAt(now);
         project.setUpdatedAt(now);
         project.setDeletedAt(null);
 
+        // 2. Initial version
         ProjectVersion version = new ProjectVersion();
         version.setVersionNumber(1);
         version.setSavedAt(now);
         version.setVersionNote("Initial version");
         version.setProject(project);
+        version.setName(project.getName());        // <= fontos
+        version.setDescription(project.getDescription()); // ha van
 
         project.getVersions().add(version);
 
+        // 3. OPTIONAL Furniture bodies
+        if (request.getBodies() != null && !request.getBodies().isEmpty()) {
+                request.getBodies().forEach(bodyReq -> {
+                FurnitureBody body = new FurnitureBody();
+                body.setWidth(bodyReq.getWidth());
+                body.setHeigth(bodyReq.getHeigth());
+                body.setDepth(bodyReq.getDepth());
+                body.setVersion(version);
+
+                version.getBodies().add(body);
+                });
+        }
+
         Project savedProject = projectRepository.save(project);
 
-        List<ProjectVersionResponse> versionResponses = savedProject.getVersions().stream()
+        // 4. Response mapping
+        List<ProjectVersionResponse> versionResponses =
+        savedProject.getVersions().stream()
                 .map(v -> new ProjectVersionResponse(
                         v.getId(),
                         v.getVersionNumber(),
@@ -144,7 +165,9 @@ public class ProjectService {
                                                 b.getHeigth(),
                                                 b.getDepth()
                                         ))
-                                        .toList()
+                                        .toList(),
+                                v.getName(),
+                                v.getDescription()
                         ))
                         .toList();
 

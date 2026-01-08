@@ -53,11 +53,7 @@ public class ProjectController {
     public ResponseEntity<CreateProjectResponse> createProject(
             @Valid @RequestBody CreateProjectRequest request) {
 
-        
-        CreateProjectResponse response = projectService.createProject(
-                request.getName(),
-                request.getDescription()  
-        );
+        CreateProjectResponse response = projectService.createProject(request);
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
