@@ -16,13 +16,22 @@ import org.junit.jupiter.api.DisplayName;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.request.UpdateProjectRequest;
 import ro.sapientia.furniture.dto.response.UpdateProjectResponse;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
+import ro.sapientia.furniture.dto.response.ProjectDetailsResponse;
+import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
 import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
+import ro.sapientia.furniture.exception.EntityNotFoundException;
 import ro.sapientia.furniture.exception.ResourceNotFoundException;
 import ro.sapientia.furniture.exception.ServiceUnavailableException;
 import ro.sapientia.furniture.model.Project;
@@ -45,6 +54,98 @@ public class ProjectServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
+
+    // =========================
+    // GET ALL PROJECTS
+    // =========================
+    @Test
+    @DisplayName("Get Projects - Success")
+    void getProjects_ShouldReturnPagedProjects() {
+        // Arrange
+        Project project = new Project();
+        project.setId(1L);
+        project.setName("Project 1");
+        project.setDescription("Description");
+        project.setCreatedAt(LocalDateTime.now());
+
+        Pageable pageable;
+        pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+        Page<Project> page;
+        page = new PageImpl<>(List.of(project), pageable, 1);
+
+        when(projectRepository.findByDeletedAtIsNull(any(Pageable.class)))
+                .thenReturn(page);
+
+        // Act
+        Page<ProjectListItemResponse> result;
+        result = projectService.getProjects(0);
+
+        // Assert
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Project 1", result.getContent().get(0).getName());
+
+        verify(projectRepository).findByDeletedAtIsNull(any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("Get Projects - Database error")
+    void getProjects_DatabaseError_ShouldThrowServiceUnavailable() {
+        when(projectRepository.findByDeletedAtIsNull(any(Pageable.class)))
+                .thenThrow(new DataAccessException("DB error") {});
+
+        assertThrows(ServiceUnavailableException.class, () -> {
+            projectService.getProjects(0);
+        });
+    }
+
+    // =========================
+    // GET PROJECT BY ID
+    // =========================
+    @Test
+    @DisplayName("Get Project By ID - Success")
+    void getProjectById_ShouldReturnDetails() {
+        // Arrange
+        Long projectId = 1L;
+
+        Project project = new Project();
+        project.setId(projectId);
+        project.setName("Project Name");
+        project.setDescription("Project Description");
+        project.setCreatedAt(LocalDateTime.now());
+        project.setUpdatedAt(LocalDateTime.now());
+
+        ProjectVersion version = new ProjectVersion();
+        version.setId(100L);
+        version.setVersionNumber(1);
+        version.setProject(project);
+        project.getVersions().add(version);
+
+        when(projectRepository.findByIdAndDeletedAtIsNull(projectId))
+                .thenReturn(Optional.of(project));
+
+        // Act
+        ProjectDetailsResponse response = projectService.getProjectById(projectId);
+
+        // Assert
+        assertNotNull(response);
+        assertEquals(projectId, response.getId());
+        assertEquals("Project Name", response.getName());
+        assertEquals(1, response.getVersions().size());
+
+        verify(projectRepository).findByIdAndDeletedAtIsNull(projectId);
+    }
+
+    @Test
+    @DisplayName("Get Project By ID - Not found")
+    void getProjectById_NotFound_ShouldThrowException() {
+        when(projectRepository.findByIdAndDeletedAtIsNull(99L))
+                .thenReturn(Optional.empty());
+
+        assertThrows(EntityNotFoundException.class, () -> {
+            projectService.getProjectById(99L);
+        });
+    }
+
 
     @Test
     void testCreateProject() {
