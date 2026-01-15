@@ -11,5 +11,6 @@ public interface ProjectVersionRepository extends JpaRepository<ProjectVersion, 
     ProjectVersion findProjectVersionById(Long id);
 
     List<ProjectVersion> findByProjectIdOrderByVersionNumberDesc(Long projectId);
-
+    // Oldest versions first (used by the update logic to delete the 11th version)
+    List<ProjectVersion> findByProjectIdOrderByVersionNumberAsc(Long projectId);
 }

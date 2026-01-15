@@ -11,6 +11,8 @@ import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
 import javax.persistence.SequenceGenerator;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 @Entity(name = "furniture_body")
 public class FurnitureBody implements Serializable {
 	private static final long serialVersionUID = 1L;
@@ -32,6 +34,7 @@ public class FurnitureBody implements Serializable {
 
 	@ManyToOne
 	@JoinColumn(name = "version_id")
+	@JsonBackReference
 	private ProjectVersion version; 
 
 	public Long getId() {
