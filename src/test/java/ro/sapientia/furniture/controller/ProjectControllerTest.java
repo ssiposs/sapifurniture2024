@@ -1,44 +1,37 @@
 package ro.sapientia.furniture.controller;
 
-import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Optional;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.dao.DataIntegrityViolationException;
-
-import ro.sapientia.furniture.exception.ResourceNotFoundException;
-import ro.sapientia.furniture.exception.ServiceUnavailableException;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import static org.mockito.ArgumentMatchers.any;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import org.mockito.MockitoAnnotations;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.RequestBuilder;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ro.sapientia.furniture.dto.request.CreateProjectRequest;
 import ro.sapientia.furniture.dto.response.CreateProjectResponse;
 import ro.sapientia.furniture.dto.response.ProjectDetailsResponse;
 import ro.sapientia.furniture.dto.response.ProjectListItemResponse;
-import ro.sapientia.furniture.dto.response.ProjectVersionResponse;
+import ro.sapientia.furniture.exception.ResourceNotFoundException;
 import ro.sapientia.furniture.service.ProjectService;
 
 class ProjectControllerTest {
@@ -169,7 +162,7 @@ class ProjectControllerTest {
         // logic is void or returns Boolean, we just need to ensure it doesn't throw
 
         // Act & Assert
-        mockMvc.perform(delete("/api/projects/{projectId}", projectId)) // Adjust URL prefix if needed
+        mockMvc.perform(delete("/projects/{projectId}", projectId)) // Adjust URL prefix if needed
                 .andExpect(status().isOk());
 
         verify(projectService).deleteProject(projectId);
