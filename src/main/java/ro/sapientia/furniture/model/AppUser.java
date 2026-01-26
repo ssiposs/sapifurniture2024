@@ -13,9 +13,7 @@ public class AppUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator="pk_app_user")
-    @SequenceGenerator(name="pk_app_user", sequenceName="pk_app_user")
-    @Column(name = "id", nullable = false, updatable = false)
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // Szekvencia helyett Identity-t használunk
     private Long id;
 
     @Column(name = "username", nullable = false, unique = true)
