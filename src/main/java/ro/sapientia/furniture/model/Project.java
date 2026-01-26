@@ -12,9 +12,12 @@ import javax.persistence.FetchType;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.JoinColumn;     // <--- EZ HIÁNYZOTT
+import javax.persistence.ManyToOne;      // <--- EZ HIÁNYZOTT
 import javax.persistence.OneToMany;
 import javax.persistence.SequenceGenerator;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;           // <--- EZ HIÁNYZOTT
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 @Entity(name = "project")
@@ -46,6 +49,13 @@ public class Project implements Serializable {
     @OneToMany(mappedBy = "project", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
     @JsonManagedReference
     private List<ProjectVersion> versions = new ArrayList<>();
+
+    // --- AZ ÚJ RÉSZ ---
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    @JsonIgnore
+    private AppUser owner;
+    // ------------------
 
     // Getters and Setters
 
@@ -103,6 +113,14 @@ public class Project implements Serializable {
 
     public void setVersions(List<ProjectVersion> versions) {
         this.versions = versions;
+    }
+
+    public AppUser getOwner() {
+        return owner;
+    }
+
+    public void setOwner(AppUser owner) {
+        this.owner = owner;
     }
 
     @Override
